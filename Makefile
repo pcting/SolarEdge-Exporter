@@ -1,3 +1,15 @@
+IMAGE_NAME := pcting/solaredge-exporter
+IMAGE_TAG := latest
+
+docker-build:
+	docker build -t $(IMAGE_NAME):$(IMAGE_TAG) .
+
+docker-push:
+	docker push $(IMAGE_NAME):$(IMAGE_TAG)
+
+docker-clean:
+	docker rmi $(IMAGE_NAME):$(IMAGE_TAG)
+
 build:
 	mkdir -p ./bin/linux
 	mkdir -p ./bin/windows
@@ -10,6 +22,3 @@ build:
 	zip ./bin/solaredge-exporter-linux-arm64-1.1.0.zip ./bin/linux/solaredge-exporter-arm
 	zip ./bin/solaredge-exporter-windows-amd64-1.1.0.zip ./bin/windows/solaredge-exporter.exe
 	zip ./bin/solaredge-exporter-macos-1.1.0.zip ./bin/darwin/solaredge-exporter
-
-docker:
-	docker build -t pcting/solaredge-exporter:latest .

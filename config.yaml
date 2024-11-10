@@ -1,9 +1,11 @@
-SolarEdge:
-  InverterAddress: "192.168.1.189"
-  InverterPort: 502
-  NumMeters: 0
-Exporter:
-  # Update Interval in seconds
-  Interval: 5
-Log:
-  Debug: true
+solaredge:
+  inverter_address: "192.168.1.189"
+  inverter_port: 502
+  meter_count: 0
+exporter:
+  listen_address: ""
+  listen_port: 2112
+  interval: 5s
+  panic_on_error: true
+log:
+  debug: true

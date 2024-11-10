@@ -1,8 +1,7 @@
 /*
-
 MIT License
 
-Copyright (c) 2019 David Suarez
+# Copyright (c) 2019 David Suarez
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the "Software"), to deal
@@ -21,31 +20,67 @@ AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
 LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
-
 */
 package config
 
-import "github.com/spf13/viper"
+import (
+	"fmt"
+	"strings"
+	"time"
+
+	"github.com/spf13/viper"
+)
+
+type config struct {
+	Solaredge struct {
+		InverterAddress string `mapstructure:"inverter_address" yaml:"inverter_address,omitempty"`
+		InverterPort    int16  `mapstructure:"inverter_port" yaml:"inverter_port,omitempty"`
+		MeterCount      int64  `mapstructure:"meter_count" yaml:"meter_count,omitempty"`
+	} `mapstructure:"solaredge" yaml:"solaredge,omitempty"`
+	Exporter struct {
+		ListenAddress string        `mapstructure:"listen_address" yaml:"listen_address,omitempty"`
+		ListenPort    int16         `mapstructure:"listen_port" yaml:"listen_port,omitempty"`
+		Interval      time.Duration `mapstructure:"interval" yaml:"interval,omitempty"`
+		PanicOnError  bool          `mapstructure:"panic_on_error" yaml:"panic_on_error,omitempty"`
+	} `mapstructure:"exporter" yaml:"exporter,omitempty"`
+	Log struct {
+		Debug bool `mapstructure:"debug" yaml:"debug,omitempty"`
+	} `mapstructure:"log" yaml:"log,omitempty"`
+}
+
+var (
+	Config config
+)
 
 // InitConfig initializes the viper configuration
 func InitConfig() {
+	viper.AutomaticEnv()
+	viper.SetEnvPrefix("SEE")
+	viper.AllowEmptyEnv(true)
+	viper.EnvKeyReplacer(strings.NewReplacer(
+		".", "_",
+	))
 	viper.SetConfigName("config")
 	viper.AddConfigPath(".")
 	viper.AddConfigPath("/etc/solaredge-exporter")
 	viper.AddConfigPath("$HOME/.solaredge-exporter")
-	viper.SetDefault("SolarEdge.InverterAddress", "")
-	viper.SetDefault("SolarEdge.InverterPort", 0)
-	viper.SetDefault("SolarEdge.NumMeters", 0)
-	viper.SetDefault("Exporter.Interval", 5)
-	viper.SetDefault("Exporter.ListenAddress", "")
-	viper.SetDefault("Exporter.ListenPort", 2112)
-	viper.BindEnv("SolarEdge.InverterAddress", "INVERTER_ADDRESS")
-	viper.BindEnv("SolarEdge.InverterPort", "INVERTER_PORT")
-	viper.BindEnv("SolarEdge.NumMeters", "NUMBER_METERS")
-	viper.BindEnv("Exporter.Interval", "EXPORTER_INTERVAL")
-	viper.BindEnv("Exporter.ListenAddress", "EXPORTER_ADDRESS")
-	viper.BindEnv("Exporter.ListenPort", "EXPORTER_PORT")
-	viper.BindEnv("Log.Debug", "DEBUG_LOGGING")
-	viper.AutomaticEnv()
-	viper.ReadInConfig()
+	err := viper.ReadInConfig()
+	if err != nil {
+		panic(fmt.Errorf("unable to read config: %w", err))
+	}
+	// workaround because viper does not treat env vars the same as other config
+	for _, key := range viper.AllKeys() {
+		envKey := viper.GetEnvPrefix() + "_" + strings.ToUpper(strings.ReplaceAll(key, ".", "_"))
+		err := viper.BindEnv(key, envKey)
+		if err != nil {
+			panic(fmt.Sprintf("config: unable to bind env: " + err.Error()))
+		}
+	}
+	err = viper.Unmarshal(&Config)
+	if err != nil {
+		panic(fmt.Errorf("unable to unmarshal config: %w", err))
+	}
+	if Config.Log.Debug {
+		viper.Debug()
+	}
 }
